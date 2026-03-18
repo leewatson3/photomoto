@@ -1,98 +1,230 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { StatusBar } from 'expo-status-bar'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { supabase } from '../../src/lib/supabase'
+import colors from '../../src/theme/colors'
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+type Photo = {
+  id: string
+  user_name: string
+  initials: string
+  caption: string
+  event_name: string
+  image_url: string
+  created_at: string
+}
 
-export default function HomeScreen() {
+const AVATAR_COLORS = ['#D85A30', '#1D9E75', '#534AB7', '#BA7517', '#993C1D']
+
+export default function FeedScreen() {
+  const [photos, setPhotos] = useState<Photo[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchPhotos()
+  }, [])
+
+  async function fetchPhotos() {
+    const { data, error } = await supabase
+      .from('photos')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.log('Error:', error.message)
+    } else {
+      setPhotos(data)
+    }
+    setLoading(false)
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <View style={styles.container}>
+      <StatusBar style="light" />
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.headerTitle}>PhotoMoto</Text>
+          <Text style={styles.headerSub}>Blankets & Wine · Live now</Text>
+        </View>
+        <View style={styles.livePill}>
+          <View style={styles.liveDot} />
+          <Text style={styles.liveText}>LIVE</Text>
+        </View>
+      </View>
+
+      {loading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={colors.orange} />
+          <Text style={styles.loadingText}>Loading shotis...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={photos}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.feedList}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item, index }: { item: Photo; index: number }) => (
+            <View style={styles.card}>
+              <View style={[styles.photoPlaceholder, { backgroundColor: AVATAR_COLORS[index % AVATAR_COLORS.length] }]}>
+                <Text style={styles.photoPlaceholderText}>📸</Text>
+              </View>
+              <View style={styles.cardBottom}>
+                <View style={styles.userRow}>
+                  <View style={[styles.avatar, { backgroundColor: AVATAR_COLORS[index % AVATAR_COLORS.length] }]}>
+                    <Text style={styles.avatarText}>{item.initials}</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.userName}>{item.user_name}</Text>
+                    <Text style={styles.userTime}>
+                      {new Date(item.created_at).toLocaleTimeString()}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.caption}>{item.caption}</Text>
+                <View style={styles.actions}>
+                  <TouchableOpacity style={styles.actionBtn}>
+                    <Text style={styles.actionText}>🔥 Moto</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.actionBtn}>
+                    <Text style={styles.actionText}>💾 Save</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.actionBtn}>
+                    <Text style={styles.actionText}>↗ Share</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+        />
+      )}
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: colors.night,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingTop: 56,
+    paddingBottom: 14,
+    backgroundColor: colors.nightMid,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.nightLight,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.orange,
+  },
+  headerSub: {
+    fontSize: 12,
+    color: colors.stone,
+    marginTop: 2,
+  },
+  livePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    backgroundColor: colors.nightLight,
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 5,
   },
-  stepContainer: {
-    gap: 8,
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 99,
+    backgroundColor: '#7CFF6B',
+  },
+  liveText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: colors.white,
+    letterSpacing: 1,
+  },
+  loadingWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: colors.stone,
+    marginTop: 12,
+    fontSize: 14,
+  },
+  feedList: {
+    padding: 14,
+    gap: 16,
+  },
+  card: {
+    backgroundColor: colors.nightMid,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  photoPlaceholder: {
+    width: '100%',
+    height: 240,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoPlaceholderText: {
+    fontSize: 48,
+  },
+  cardBottom: {
+    padding: 14,
+  },
+  userRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 99,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-});
+  avatarText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: colors.white,
+  },
+  userName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  userTime: {
+    fontSize: 11,
+    color: colors.stone,
+  },
+  caption: {
+    fontSize: 14,
+    color: colors.dust,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionBtn: {
+    backgroundColor: colors.nightLight,
+    borderRadius: 99,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  actionText: {
+    fontSize: 12,
+    color: colors.white,
+  },
+})

@@ -1,112 +1,176 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { StatusBar } from 'expo-status-bar'
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import colors from '../../src/theme/colors'
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+const EVENTS = [
+  { id: '1', name: 'Blankets & Wine Nairobi', date: 'Sat 29 Mar', venue: 'Ngong Racecourse', price: 'KES 1,500', shooters: 347, status: 'live' },
+  { id: '2', name: 'Koroga Festival', date: 'Sun 30 Mar', venue: 'Arboretum', price: 'KES 800', shooters: 124, status: 'upcoming' },
+  { id: '3', name: 'Afro Nation Nairobi', date: 'Sat 5 Apr', venue: 'KICC Grounds', price: 'KES 3,000', shooters: 0, status: 'upcoming' },
+  { id: '4', name: 'Jazz in the Park', date: 'Sun 6 Apr', venue: 'Uhuru Gardens', price: 'Free', shooters: 0, status: 'upcoming' },
+]
 
-export default function TabTwoScreen() {
+export default function EventsScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
-  );
+    <View style={styles.container}>
+      <StatusBar style="light" />
+
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Discover Events</Text>
+        <Text style={styles.headerSub}>Nairobi · This week</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+        {EVENTS.map((event) => (
+          <TouchableOpacity key={event.id} style={styles.card}>
+
+            <View style={styles.cardTop}>
+              <View style={styles.cardLeft}>
+                {event.status === 'live' && (
+                  <View style={styles.livePill}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveText}>LIVE</Text>
+                  </View>
+                )}
+                <Text style={styles.eventName}>{event.name}</Text>
+                <Text style={styles.eventMeta}>{event.date} · {event.venue}</Text>
+              </View>
+            </View>
+
+            <View style={styles.cardBottom}>
+              <View style={styles.statRow}>
+                <Text style={styles.statText}>
+                  {event.status === 'live'
+                    ? `📸 ${event.shooters} shooting now`
+                    : '🎟️ Tickets available'}
+                </Text>
+                <Text style={styles.priceText}>{event.price}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.joinBtn,
+                  event.status === 'live' ? styles.joinBtnLive : styles.joinBtnUpcoming
+                ]}
+              >
+                <Text style={styles.joinBtnText}>
+                  {event.status === 'live' ? '🔥 Join & shoot' : '🎟️ Get tickets'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: colors.night,
   },
-  titleContainer: {
+  header: {
+    paddingHorizontal: 18,
+    paddingTop: 56,
+    paddingBottom: 16,
+    backgroundColor: colors.nightMid,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.nightLight,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.white,
+  },
+  headerSub: {
+    fontSize: 12,
+    color: colors.stone,
+    marginTop: 2,
+  },
+  list: {
+    padding: 14,
+    gap: 14,
+  },
+  card: {
+    backgroundColor: colors.nightMid,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 0.5,
+    borderColor: colors.nightLight,
+  },
+  cardTop: {
+    padding: 14,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.nightLight,
+  },
+  cardLeft: {
+    gap: 6,
+  },
+  livePill: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(216,90,48,0.2)',
+    borderRadius: 99,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    gap: 5,
+    marginBottom: 4,
   },
-});
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 99,
+    backgroundColor: '#7CFF6B',
+  },
+  liveText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: colors.orange,
+    letterSpacing: 1,
+  },
+  eventName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  eventMeta: {
+    fontSize: 12,
+    color: colors.stone,
+  },
+  cardBottom: {
+    padding: 14,
+    gap: 10,
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statText: {
+    fontSize: 12,
+    color: colors.stone,
+  },
+  priceText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.orange,
+  },
+  joinBtn: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  joinBtnLive: {
+    backgroundColor: colors.orange,
+  },
+  joinBtnUpcoming: {
+    backgroundColor: colors.green,
+  },
+  joinBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.white,
+  },
+})

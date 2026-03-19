@@ -1,14 +1,14 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useState } from 'react'
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    ScrollView,
-    StyleSheet, Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  ScrollView,
+  StyleSheet, Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native'
 import QRCode from 'react-native-qrcode-svg'
 import colors from '../theme/colors'
@@ -116,12 +116,46 @@ export default function TicketsScreen() {
       return
     }
     setLoading(true)
-    setTimeout(() => {
-      const ref = 'PM' + Math.random().toString(36).toUpperCase().slice(2, 8)
-      setTicketRef(ref)
+
+    try {
+      const response = await fetch(
+        'https://lvhpjfgmqlehdqcqvbft.supabase.co/functions/v1/mpesa-stk',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            phone: phone,
+            amount: total,
+            reference: `PM-${selectedEvent.id}-${selectedTier.id}`,
+          }),
+        }
+      )
+
+      const data = await response.json()
+      console.log('M-Pesa response:', JSON.stringify(data))
+
+      if (data.success) {
+        const ref = 'PM' + Math.random().toString(36).toUpperCase().slice(2, 8)
+        setTicketRef(ref)
+        setLoading(false)
+        setScreen('success')
+        Alert.alert(
+          'Check your phone! 📱',
+          'Enter your M-Pesa PIN to complete payment.'
+        )
+      } else {
+        Alert.alert('Payment failed', data.error ?? 'Something went wrong. Try again.')
+        setLoading(false)
+      }
+
+    } catch (e: any) {
+      console.log('Payment error:', e.message)
+      Alert.alert('Error', 'Could not connect to payment service. Try again.')
       setLoading(false)
-      setScreen('success')
-    }, 2000)
+    }
   }
 
   // ── BROWSE ───────────────────────────────────────────────
@@ -362,7 +396,6 @@ export default function TicketsScreen() {
         </View>
 
         <View style={styles.ticketCard}>
-
           <View style={styles.ticketCardTop}>
             <Text style={styles.ticketEventName}>{selectedEvent.name}</Text>
             <Text style={styles.ticketTierName}>{selectedTier.name} · {qty} ticket{qty > 1 ? 's' : ''}</Text>
@@ -402,7 +435,6 @@ export default function TicketsScreen() {
             />
             <Text style={styles.qrLabel}>Scan at the gate · also joins you to the photo feed</Text>
           </View>
-
         </View>
 
         <TouchableOpacity

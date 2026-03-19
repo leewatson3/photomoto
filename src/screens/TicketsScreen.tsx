@@ -10,6 +10,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native'
+import QRCode from 'react-native-qrcode-svg'
 import colors from '../theme/colors'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
@@ -109,22 +110,12 @@ export default function TicketsScreen() {
     setScreen('checkout')
   }
 
-  async function sendSTK() {
+  async function confirmPayment() {
     if (!phone || phone.length < 9) {
       Alert.alert('Hold on', 'Please enter a valid Safaricom number.')
       return
     }
     setLoading(true)
-    // Simulate STK push delay
-    setTimeout(() => {
-      setLoading(false)
-      setScreen('stk')
-    }, 1500)
-  }
-
-  async function confirmPayment() {
-    setLoading(true)
-    // Simulate payment confirmation
     setTimeout(() => {
       const ref = 'PM' + Math.random().toString(36).toUpperCase().slice(2, 8)
       setTicketRef(ref)
@@ -139,8 +130,6 @@ export default function TicketsScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {EVENTS.map((event) => (
           <View key={event.id} style={styles.eventCard}>
-
-            {/* Event header */}
             <View style={styles.eventHeader}>
               <View style={styles.eventHeaderLeft}>
                 {event.status === 'live' && (
@@ -154,15 +143,10 @@ export default function TicketsScreen() {
                 <Text style={styles.eventMeta}>{event.time}</Text>
               </View>
             </View>
-
-            {/* Ticket tiers */}
             {event.tiers.map((tier) => (
               <TouchableOpacity
                 key={tier.id}
-                style={[
-                  styles.tierRow,
-                  tier.soldOut && styles.tierRowSoldOut,
-                ]}
+                style={[styles.tierRow, tier.soldOut && styles.tierRowSoldOut]}
                 onPress={() => selectTicket(event, tier)}
                 disabled={tier.soldOut}
               >
@@ -186,9 +170,7 @@ export default function TicketsScreen() {
                     </View>
                   ) : (
                     <>
-                      <Text style={styles.tierPrice}>
-                        KES {tier.price.toLocaleString()}
-                      </Text>
+                      <Text style={styles.tierPrice}>KES {tier.price.toLocaleString()}</Text>
                       <View style={styles.buyBtn}>
                         <Text style={styles.buyBtnText}>Buy</Text>
                       </View>
@@ -197,7 +179,6 @@ export default function TicketsScreen() {
                 </View>
               </TouchableOpacity>
             ))}
-
           </View>
         ))}
       </ScrollView>
@@ -208,7 +189,6 @@ export default function TicketsScreen() {
   if (screen === 'checkout') {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-
         <TouchableOpacity style={styles.backRow} onPress={() => setScreen('browse')}>
           <Ionicons name="chevron-back" size={20} color={colors.orange} />
           <Text style={styles.backText}>Back to events</Text>
@@ -216,7 +196,6 @@ export default function TicketsScreen() {
 
         <Text style={styles.sectionTitle}>Select ticket</Text>
 
-        {/* Ticket tiers */}
         {selectedEvent.tiers.filter(t => !t.soldOut).map((tier) => (
           <TouchableOpacity
             key={tier.id}
@@ -231,9 +210,7 @@ export default function TicketsScreen() {
                 styles.radioOuter,
                 selectedTier.id === tier.id && styles.radioOuterActive,
               ]}>
-                {selectedTier.id === tier.id && (
-                  <View style={styles.radioInner} />
-                )}
+                {selectedTier.id === tier.id && <View style={styles.radioInner} />}
               </View>
               <View style={styles.selectTierInfo}>
                 <Text style={styles.selectTierName}>{tier.name}</Text>
@@ -262,27 +239,19 @@ export default function TicketsScreen() {
           </TouchableOpacity>
         ))}
 
-        {/* Quantity */}
         <View style={styles.qtyRow}>
           <Text style={styles.qtyLabel}>Quantity</Text>
           <View style={styles.qtyCtrl}>
-            <TouchableOpacity
-              style={styles.qtyBtn}
-              onPress={() => setQty(q => Math.max(1, q - 1))}
-            >
+            <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty(q => Math.max(1, q - 1))}>
               <Text style={styles.qtyBtnText}>−</Text>
             </TouchableOpacity>
             <Text style={styles.qtyNum}>{qty}</Text>
-            <TouchableOpacity
-              style={styles.qtyBtn}
-              onPress={() => setQty(q => Math.min(10, q + 1))}
-            >
+            <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty(q => Math.min(10, q + 1))}>
               <Text style={styles.qtyBtnText}>+</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Total */}
         <View style={styles.totalRow}>
           <View>
             <Text style={styles.totalLabel}>Total to pay</Text>
@@ -291,11 +260,7 @@ export default function TicketsScreen() {
           <Text style={styles.totalAmount}>KES {total.toLocaleString()}</Text>
         </View>
 
-        {/* M-Pesa button */}
-        <TouchableOpacity
-          style={styles.mpesaBtn}
-          onPress={() => setScreen('stk')}
-        >
+        <TouchableOpacity style={styles.mpesaBtn} onPress={() => setScreen('stk')}>
           <View style={styles.mpesaLogo}>
             <Text style={styles.mpesaLogoText}>M</Text>
           </View>
@@ -303,7 +268,6 @@ export default function TicketsScreen() {
         </TouchableOpacity>
 
         <Text style={styles.secureNote}>🔒 Secured by Safaricom Daraja API</Text>
-
       </ScrollView>
     )
   }
@@ -313,7 +277,6 @@ export default function TicketsScreen() {
     return (
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.content}>
-
           <TouchableOpacity style={styles.backRow} onPress={() => setScreen('checkout')}>
             <Ionicons name="chevron-back" size={20} color={colors.orange} />
             <Text style={styles.backText}>Back</Text>
@@ -327,7 +290,6 @@ export default function TicketsScreen() {
             <Text style={styles.stkSub}>Enter your Safaricom number</Text>
           </View>
 
-          {/* Phone input */}
           <View style={styles.phoneInputWrap}>
             <View style={styles.phonePrefix}>
               <Text style={styles.phonePrefixFlag}>🇰🇪</Text>
@@ -344,7 +306,6 @@ export default function TicketsScreen() {
             />
           </View>
 
-          {/* Summary */}
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Event</Text>
@@ -380,7 +341,6 @@ export default function TicketsScreen() {
             You'll receive a pop-up on your phone.{'\n'}
             Enter your M-Pesa PIN to complete payment.
           </Text>
-
         </ScrollView>
       </View>
     )
@@ -391,7 +351,6 @@ export default function TicketsScreen() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
 
-        {/* Success header */}
         <View style={styles.successHeader}>
           <View style={styles.successIcon}>
             <Ionicons name="checkmark" size={32} color={colors.white} />
@@ -402,7 +361,6 @@ export default function TicketsScreen() {
           </Text>
         </View>
 
-        {/* Ticket card */}
         <View style={styles.ticketCard}>
 
           <View style={styles.ticketCardTop}>
@@ -429,46 +387,30 @@ export default function TicketsScreen() {
             </View>
           </View>
 
-          {/* Perforation */}
           <View style={styles.perforation}>
             <View style={styles.perforationCircleLeft} />
             <View style={styles.perforationLine} />
             <View style={styles.perforationCircleRight} />
           </View>
 
-          {/* QR code area */}
           <View style={styles.qrArea}>
-            <View style={styles.qrBox}>
-              <View style={styles.qrGrid}>
-                {Array.from({ length: 25 }).map((_, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.qrCell,
-                      Math.random() > 0.5 && styles.qrCellFilled,
-                    ]}
-                  />
-                ))}
-              </View>
-              {/* Corner squares */}
-              <View style={[styles.qrCorner, styles.qrCornerTL]} />
-              <View style={[styles.qrCorner, styles.qrCornerTR]} />
-              <View style={[styles.qrCorner, styles.qrCornerBL]} />
-            </View>
+            <QRCode
+              value={`PHOTOMOTO:${ticketRef}:${selectedEvent.id}:${selectedTier.id}`}
+              size={140}
+              color={colors.nightMid}
+              backgroundColor={colors.dust}
+            />
             <Text style={styles.qrLabel}>Scan at the gate · also joins you to the photo feed</Text>
           </View>
 
         </View>
 
-        {/* Actions */}
-        <View style={styles.ticketActions}>
-          <TouchableOpacity
-            style={styles.openAppBtn}
-            onPress={() => setScreen('browse')}
-          >
-            <Text style={styles.openAppBtnText}>View more events</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.openAppBtn}
+          onPress={() => setScreen('browse')}
+        >
+          <Text style={styles.openAppBtnText}>View more events</Text>
+        </TouchableOpacity>
 
       </ScrollView>
     </View>
@@ -997,65 +939,10 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 10,
   },
-  qrBox: {
-    width: 100,
-    height: 100,
-    backgroundColor: colors.dust,
-    borderRadius: 10,
-    padding: 8,
-    position: 'relative',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qrGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 2,
-    width: 84,
-  },
-  qrCell: {
-    width: 13,
-    height: 13,
-    backgroundColor: colors.dust,
-  },
-  qrCellFilled: {
-    backgroundColor: colors.nightMid,
-  },
-  qrCorner: {
-    position: 'absolute',
-    width: 22,
-    height: 22,
-    borderWidth: 3,
-    borderColor: colors.nightMid,
-  },
-  qrCornerTL: {
-    top: 8,
-    left: 8,
-    borderBottomWidth: 0,
-    borderRightWidth: 0,
-  },
-  qrCornerTR: {
-    top: 8,
-    right: 8,
-    borderBottomWidth: 0,
-    borderLeftWidth: 0,
-  },
-  qrCornerBL: {
-    bottom: 8,
-    left: 8,
-    borderTopWidth: 0,
-    borderRightWidth: 0,
-  },
   qrLabel: {
     fontSize: 11,
     color: colors.stone,
     textAlign: 'center',
-  },
-  ticketActions: {
-    gap: 10,
   },
   openAppBtn: {
     backgroundColor: colors.orange,

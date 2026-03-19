@@ -1,8 +1,20 @@
+import { Ionicons } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  ScrollView,
+  StyleSheet, Text,
+  TouchableOpacity,
+  View
+} from 'react-native'
 import { supabase } from '../../src/lib/supabase'
 import colors from '../../src/theme/colors'
+
+const SCREEN_WIDTH = Dimensions.get('window').width
 
 type Photo = {
   id: string
@@ -16,9 +28,20 @@ type Photo = {
 
 const AVATAR_COLORS = ['#D85A30', '#1D9E75', '#534AB7', '#BA7517', '#993C1D']
 
+const HIGHLIGHTS = [
+  { id: '1', label: 'Top shotis', color: '#D85A30', emoji: '🏆' },
+  { id: '2', label: 'Opening', color: '#1D9E75', emoji: '🎵' },
+  { id: '3', label: 'Crowd', color: '#534AB7', emoji: '🙌' },
+  { id: '4', label: 'Sunset', color: '#BA7517', emoji: '🌅' },
+  { id: '5', label: 'Food', color: '#993C1D', emoji: '🍗' },
+  { id: '6', label: 'VIP', color: '#0F6E56', emoji: '⭐' },
+]
+
 export default function FeedScreen() {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [loading, setLoading] = useState(true)
+  const [liked, setLiked] = useState<Set<string>>(new Set())
+  const router = useRouter()
 
   useEffect(() => {
     fetchPhotos()
@@ -29,75 +52,153 @@ export default function FeedScreen() {
       .from('photos')
       .select('*')
       .order('created_at', { ascending: false })
-
-    if (error) {
-      console.log('Error:', error.message)
-    } else {
-      setPhotos(data)
-    }
+    if (!error && data) setPhotos(data)
     setLoading(false)
+  }
+
+  function toggleLike(id: string) {
+    setLiked(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function timeAgo(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'just now'
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    return `${Math.floor(hrs / 24)}d ago`
   }
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>PhotoMoto</Text>
-          <Text style={styles.headerSub}>Blankets & Wine · Live now</Text>
-        </View>
-        <View style={styles.livePill}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>LIVE</Text>
-        </View>
-      </View>
+      <FlatList
+        data={photos}
+        keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={() => (
+          <View>
+            {/* Stories / Highlights row */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.storiesRow}
+            >
+              {HIGHLIGHTS.map((h, i) => (
+                <TouchableOpacity
+                  key={h.id}
+                  style={styles.storyItem}
+                  onPress={() => router.push('/(tabs)/highlights')}
+                >
+                  <View style={[styles.storyRing, { borderColor: h.color }]}>
+                    <View style={[styles.storyCircle, { backgroundColor: h.color }]}>
+                      <Text style={styles.storyEmoji}>{h.emoji}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.storyLabel} numberOfLines={1}>{h.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
-      {loading ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={colors.orange} />
-          <Text style={styles.loadingText}>Loading shotis...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={photos}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.feedList}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item, index }: { item: Photo; index: number }) => (
-            <View style={styles.card}>
-              <View style={[styles.photoPlaceholder, { backgroundColor: AVATAR_COLORS[index % AVATAR_COLORS.length] }]}>
-                <Text style={styles.photoPlaceholderText}>📸</Text>
-              </View>
-              <View style={styles.cardBottom}>
-                <View style={styles.userRow}>
-                  <View style={[styles.avatar, { backgroundColor: AVATAR_COLORS[index % AVATAR_COLORS.length] }]}>
-                    <Text style={styles.avatarText}>{item.initials}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.userName}>{item.user_name}</Text>
-                    <Text style={styles.userTime}>
-                      {new Date(item.created_at).toLocaleTimeString()}
-                    </Text>
-                  </View>
+            <View style={styles.sectionDivider} />
+          </View>
+        )}
+        renderItem={({ item, index }: { item: Photo; index: number }) => {
+          const avatarColor = AVATAR_COLORS[index % AVATAR_COLORS.length]
+          const isLiked = liked.has(item.id)
+
+          return (
+            <View style={styles.post}>
+
+              {/* Post header */}
+              <View style={styles.postHeader}>
+                <View style={[styles.postAvatar, { backgroundColor: avatarColor }]}>
+                  <Text style={styles.postAvatarText}>{item.initials}</Text>
                 </View>
-                <Text style={styles.caption}>{item.caption}</Text>
-                <View style={styles.actions}>
-                  <TouchableOpacity style={styles.actionBtn}>
-                    <Text style={styles.actionText}>🔥 Moto</Text>
+                <View style={styles.postHeaderInfo}>
+                  <Text style={styles.postUserName}>{item.user_name}</Text>
+                  <Text style={styles.postMeta}>{item.event_name} · {timeAgo(item.created_at)}</Text>
+                </View>
+                <TouchableOpacity style={styles.postMoreBtn}>
+                  <Ionicons name="ellipsis-horizontal" size={18} color={colors.stone} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Photo */}
+              <View style={[styles.postImage, { backgroundColor: avatarColor }]}>
+                <Text style={styles.postImageEmoji}>📸</Text>
+              </View>
+
+              {/* Action row */}
+              <View style={styles.postActions}>
+                <View style={styles.postActionsLeft}>
+                  <TouchableOpacity
+                    style={styles.postActionBtn}
+                    onPress={() => toggleLike(item.id)}
+                  >
+                    <Ionicons
+                      name={isLiked ? 'heart' : 'heart-outline'}
+                      size={26}
+                      color={isLiked ? '#FF3B30' : colors.white}
+                    />
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionBtn}>
-                    <Text style={styles.actionText}>💾 Save</Text>
+                  <TouchableOpacity style={styles.postActionBtn}>
+                    <Ionicons name="chatbubble-outline" size={24} color={colors.white} />
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionBtn}>
-                    <Text style={styles.actionText}>↗ Share</Text>
+                  <TouchableOpacity style={styles.postActionBtn}>
+                    <Ionicons name="paper-plane-outline" size={24} color={colors.white} />
                   </TouchableOpacity>
                 </View>
+                <TouchableOpacity>
+                  <Ionicons name="bookmark-outline" size={24} color={colors.white} />
+                </TouchableOpacity>
               </View>
+
+              {/* Likes */}
+              <View style={styles.postLikes}>
+                <Text style={styles.postLikesText}>
+                  {isLiked ? '1 like' : 'Be the first to like'}
+                </Text>
+              </View>
+
+              {/* Caption */}
+              {item.caption ? (
+                <View style={styles.postCaption}>
+                  <Text style={styles.postCaptionUser}>{item.user_name} </Text>
+                  <Text style={styles.postCaptionText}>{item.caption}</Text>
+                </View>
+              ) : null}
+
+              {/* Time */}
+              <Text style={styles.postTime}>{timeAgo(item.created_at)}</Text>
+
             </View>
-          )}
-        />
-      )}
+          )
+        }}
+        ListEmptyComponent={() => (
+          !loading ? (
+            <View style={styles.emptyWrap}>
+              <Ionicons name="camera-outline" size={56} color={colors.nightLight} />
+              <Text style={styles.emptyTitle}>No shotis yet</Text>
+              <Text style={styles.emptySub}>Be the first to shoot at this event!</Text>
+            </View>
+          ) : null
+        )}
+        ListFooterComponent={() => (
+          loading ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator size="large" color={colors.orange} />
+            </View>
+          ) : null
+        )}
+      />
     </View>
   )
 }
@@ -107,124 +208,155 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.night,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  storiesRow: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 14,
+  },
+  storyItem: {
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingTop: 56,
-    paddingBottom: 14,
-    backgroundColor: colors.nightMid,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.nightLight,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.orange,
-  },
-  headerSub: {
-    fontSize: 12,
-    color: colors.stone,
-    marginTop: 2,
-  },
-  livePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.nightLight,
-    borderRadius: 99,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
     gap: 5,
+    width: 68,
   },
-  liveDot: {
-    width: 6,
-    height: 6,
+  storyRing: {
+    width: 66,
+    height: 66,
     borderRadius: 99,
-    backgroundColor: '#7CFF6B',
+    borderWidth: 2.5,
+    padding: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  liveText: {
-    fontSize: 10,
-    fontWeight: 'bold',
+  storyCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 99,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  storyEmoji: {
+    fontSize: 22,
+  },
+  storyLabel: {
+    fontSize: 11,
     color: colors.white,
-    letterSpacing: 1,
+    textAlign: 'center',
+    fontWeight: '500',
   },
-  loadingWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  sectionDivider: {
+    height: 0.5,
+    backgroundColor: colors.nightLight,
   },
-  loadingText: {
-    color: colors.stone,
-    marginTop: 12,
-    fontSize: 14,
+  post: {
+    marginBottom: 4,
   },
-  feedList: {
-    padding: 14,
-    gap: 16,
-  },
-  card: {
-    backgroundColor: colors.nightMid,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  photoPlaceholder: {
-    width: '100%',
-    height: 240,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  photoPlaceholderText: {
-    fontSize: 48,
-  },
-  cardBottom: {
-    padding: 14,
-  },
-  userRow: {
+  postHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     gap: 10,
-    marginBottom: 8,
   },
-  avatar: {
-    width: 32,
-    height: 32,
+  postAvatar: {
+    width: 36,
+    height: 36,
     borderRadius: 99,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    fontSize: 11,
+  postAvatarText: {
+    fontSize: 12,
     fontWeight: 'bold',
     color: colors.white,
   },
-  userName: {
+  postHeaderInfo: {
+    flex: 1,
+  },
+  postUserName: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.white,
   },
-  userTime: {
+  postMeta: {
     fontSize: 11,
     color: colors.stone,
+    marginTop: 1,
   },
-  caption: {
-    fontSize: 14,
-    color: colors.dust,
-    marginBottom: 12,
-    lineHeight: 20,
+  postMoreBtn: {
+    padding: 4,
   },
-  actions: {
+  postImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_WIDTH,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  postImageEmoji: {
+    fontSize: 80,
+    opacity: 0.5,
+  },
+  postActions: {
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  actionBtn: {
-    backgroundColor: colors.nightLight,
-    borderRadius: 99,
+  postActionsLeft: {
+    flexDirection: 'row',
+    gap: 14,
+    alignItems: 'center',
+  },
+  postActionBtn: {
+    padding: 2,
+  },
+  postLikes: {
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    marginBottom: 4,
   },
-  actionText: {
-    fontSize: 12,
+  postLikesText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: colors.white,
+  },
+  postCaption: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 14,
+    marginBottom: 4,
+  },
+  postCaptionUser: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  postCaptionText: {
+    fontSize: 13,
+    color: colors.dust,
+    flex: 1,
+  },
+  postTime: {
+    fontSize: 11,
+    color: colors.stone,
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+  },
+  loadingWrap: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyWrap: {
+    alignItems: 'center',
+    paddingTop: 80,
+    gap: 12,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  emptySub: {
+    fontSize: 14,
+    color: colors.stone,
   },
 })

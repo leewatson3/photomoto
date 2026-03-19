@@ -81,6 +81,15 @@ export default function TabLayout() {
     ),
   }}
   />
+  <Tabs.Screen
+  name="swipe"
+  options={{
+    title: 'Review',
+    tabBarIcon: ({ color }) => (
+      <Text style={{ fontSize: 18, color }}>🔥</Text>
+    ),
+  }}
+/>
     </Tabs>
   )
 }

@@ -138,6 +138,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="johnte"
+        options={{
+        title: 'Johnte AI',
+         href: null,
+        tabBarIcon: ({ color, size }) => (
+      <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} />
+       ),
+     }}
+      />
+      <Tabs.Screen
         name="highlights"
         options={{
           title: 'Highlights',

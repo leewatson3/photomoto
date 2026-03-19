@@ -7,6 +7,7 @@ const colors = {
   nightLight: '#444441',
   stone: '#888780',
   dust: '#F1EFE8',
+  dustMid: '#E8E6DE',
   white: '#FFFFFF',
   green: '#00A651',
 }

@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
     ActivityIndicator,
@@ -14,6 +16,7 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [photoCount, setPhotoCount] = useState(0)
+  const router = useRouter()
 
   useEffect(() => {
     getUser()
@@ -71,14 +74,6 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Log out</Text>
-        </TouchableOpacity>
-      </View>
-
       {/* Avatar */}
       <View style={styles.avatarSection}>
         <View style={styles.avatar}>
@@ -86,6 +81,9 @@ export default function ProfileScreen() {
         </View>
         <Text style={styles.userName}>{name}</Text>
         <Text style={styles.userEmail}>{email}</Text>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Log out</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Stats */}
@@ -106,45 +104,56 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Menu items */}
+      {/* Menu */}
       <View style={styles.menu}>
 
-        <TouchableOpacity style={styles.menuItem}>
-          <Text style={styles.menuIcon}>🎟️</Text>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push('/(tabs)/explore')}
+        >
+          <Ionicons name="ticket-outline" size={20} color={colors.orange} />
           <Text style={styles.menuLabel}>My tickets</Text>
-          <Text style={styles.menuArrow}>›</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.stone} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
-          <Text style={styles.menuIcon}>📸</Text>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push('/(tabs)/index')}
+        >
+          <Ionicons name="images-outline" size={20} color={colors.orange} />
           <Text style={styles.menuLabel}>My shotis</Text>
-          <Text style={styles.menuArrow}>›</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.stone} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push('/(tabs)/johnte')}
+        >
+          <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.orange} />
+          <Text style={styles.menuLabel}>Chat with Johnte</Text>
+          <View style={styles.aiBadge}>
+            <Text style={styles.aiBadgeText}>AI</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.stone} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
-          <Text style={styles.menuIcon}>⭐</Text>
+          <Ionicons name="star-outline" size={20} color={colors.orange} />
           <Text style={styles.menuLabel}>Upgrade to Pro</Text>
           <View style={styles.proBadge}>
             <Text style={styles.proBadgeText}>KES 500/mo</Text>
           </View>
-          <Text style={styles.menuArrow}>›</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.stone} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.menuItem}>
-          <Text style={styles.menuIcon}>🤖</Text>
-          <Text style={styles.menuLabel}>Chat with Johnte</Text>
-          <Text style={styles.menuArrow}>›</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <Text style={styles.menuIcon}>⚙️</Text>
+          <Ionicons name="settings-outline" size={20} color={colors.orange} />
           <Text style={styles.menuLabel}>Settings</Text>
-          <Text style={styles.menuArrow}>›</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.stone} />
         </TouchableOpacity>
 
       </View>
 
-      {/* Version */}
       <Text style={styles.version}>PhotoMoto v1.0.0 · Made in Nairobi 🇰🇪</Text>
 
     </ScrollView>
@@ -164,33 +173,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.night,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingTop: 56,
-    paddingBottom: 14,
-    backgroundColor: colors.nightMid,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.nightLight,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.white,
-  },
-  logoutBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 0.5,
-    borderColor: colors.nightLight,
-  },
-  logoutText: {
-    fontSize: 13,
-    color: colors.stone,
   },
   avatarSection: {
     alignItems: 'center',
@@ -217,6 +199,18 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   userEmail: {
+    fontSize: 13,
+    color: colors.stone,
+  },
+  logoutBtn: {
+    marginTop: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 99,
+    borderWidth: 0.5,
+    borderColor: colors.nightLight,
+  },
+  logoutText: {
     fontSize: 13,
     color: colors.stone,
   },
@@ -262,21 +256,24 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.nightLight,
     gap: 12,
   },
-  menuIcon: {
-    fontSize: 18,
-    width: 28,
-  },
   menuLabel: {
     flex: 1,
     fontSize: 14,
     color: colors.white,
   },
-  menuArrow: {
-    fontSize: 18,
-    color: colors.stone,
+  aiBadge: {
+    backgroundColor: colors.orange,
+    borderRadius: 99,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  aiBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.white,
   },
   proBadge: {
-    backgroundColor: colors.orange,
+    backgroundColor: 'rgba(216,90,48,0.2)',
     borderRadius: 99,
     paddingHorizontal: 10,
     paddingVertical: 3,
@@ -284,7 +281,7 @@ const styles = StyleSheet.create({
   proBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: colors.white,
+    color: colors.orange,
   },
   version: {
     textAlign: 'center',

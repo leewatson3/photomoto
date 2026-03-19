@@ -1,10 +1,20 @@
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera'
+import * as ImageManipulator from 'expo-image-manipulator'
 import { useEffect, useRef, useState } from 'react'
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import {
+    Alert,
+    KeyboardAvoidingView, Platform, ScrollView,
+    StyleSheet, Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native'
 import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import { supabase } from '../lib/supabase'
 import colors from '../theme/colors'
 
 type Mode = 'Photo' | 'Video' | 'Burst'
+type Screen = 'camera' | 'preview'
 
 const VIDEO_DURATION = 3
 
@@ -15,6 +25,10 @@ export default function CameraScreen() {
   const [isRecording, setIsRecording] = useState(false)
   const [timer, setTimer] = useState(VIDEO_DURATION)
   const [permission, requestPermission] = useCameraPermissions()
+  const [screen, setScreen] = useState<Screen>('camera')
+  const [photoUri, setPhotoUri] = useState<string | null>(null)
+  const [caption, setCaption] = useState('')
+  const [uploading, setUploading] = useState(false)
   const cameraRef = useRef<CameraView>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const zoomBase = useRef(0)
@@ -44,8 +58,10 @@ export default function CameraScreen() {
     if (!cameraRef.current) return
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 })
-      Alert.alert('Shoti taken! 🔥', 'Upload coming next.')
-      console.log('Photo:', photo)
+      if (photo) {
+        setPhotoUri(photo.uri)
+        setScreen('preview')
+      }
     } catch (e) {
       Alert.alert('Error', 'Could not take photo.')
     }
@@ -86,11 +102,8 @@ export default function CameraScreen() {
     if (mode === 'Photo' || mode === 'Burst') {
       takePhoto()
     } else if (mode === 'Video') {
-      if (isRecording) {
-        stopVideo()
-      } else {
-        startVideo()
-      }
+      if (isRecording) stopVideo()
+      else startVideo()
     }
   }
 
@@ -98,21 +111,173 @@ export default function CameraScreen() {
     setFacing(facing === 'back' ? 'front' : 'back')
   }
 
+  async function uploadPhoto() {
+    if (!photoUri) return
+    setUploading(true)
+
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        Alert.alert('Error', 'You must be logged in to upload.')
+        setUploading(false)
+        return
+      }
+
+      // Resize image to save storage
+      const manipulated = await ImageManipulator.manipulateAsync(
+        photoUri,
+        [{ resize: { width: 1080 } }],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      )
+
+      // Convert to blob
+      const response = await fetch(manipulated.uri)
+      const blob = await response.blob()
+      const arrayBuffer = await new Response(blob).arrayBuffer()
+
+      // Upload to Supabase Storage
+      const fileName = `${user.id}/${Date.now()}.jpg`
+      const { error: uploadError } = await supabase.storage
+        .from('photos')
+        .upload(fileName, arrayBuffer, {
+          contentType: 'image/jpeg',
+          upsert: false,
+        })
+
+      if (uploadError) {
+        Alert.alert('Upload failed', uploadError.message)
+        setUploading(false)
+        return
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('photos')
+        .getPublicUrl(fileName)
+
+      // Get user name
+      const name = user.user_metadata?.full_name ?? 'Photographer'
+      const initials = name
+        .split(' ')
+        .map((n: string) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+
+      // Save to photos table
+      const { error: dbError } = await supabase
+        .from('photos')
+        .insert({
+          user_id: user.id,
+          user_name: name,
+          initials,
+          caption: caption || null,
+          event_name: 'Blankets & Wine',
+          image_url: publicUrl,
+        })
+
+      if (dbError) {
+        Alert.alert('Error saving photo', dbError.message)
+        setUploading(false)
+        return
+      }
+
+      // Success
+      Alert.alert('Shoti posted! 🔥', 'Your photo is now live in the feed.')
+      setCaption('')
+      setPhotoUri(null)
+      setScreen('camera')
+
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Something went wrong.')
+    }
+
+    setUploading(false)
+  }
+
   const pinchGesture = Gesture.Pinch()
-    .onStart(() => {
-      zoomBase.current = zoom
-    })
+    .onStart(() => { zoomBase.current = zoom })
     .onUpdate((e) => {
       if (isRecording) return
-      const newZoom = Math.min(
-        Math.max(zoomBase.current + (e.scale - 1) * 0.1, 0),
-        0.5
-      )
+      const newZoom = Math.min(Math.max(zoomBase.current + (e.scale - 1) * 0.1, 0), 0.5)
       setZoom(newZoom)
     })
 
   const progress = ((VIDEO_DURATION - timer) / VIDEO_DURATION) * 100
 
+  // ── PREVIEW SCREEN ──────────────────────────────────────
+  if (screen === 'preview' && photoUri) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.previewContent}>
+
+          {/* Header */}
+          <View style={styles.previewHeader}>
+            <TouchableOpacity onPress={() => setScreen('camera')}>
+              <Text style={styles.previewBack}>‹ Retake</Text>
+            </TouchableOpacity>
+            <Text style={styles.previewTitle}>Post shoti</Text>
+            <View style={{ width: 60 }} />
+          </View>
+
+          {/* Photo preview */}
+          <View style={styles.previewImageWrap}>
+            <View style={styles.previewImagePlaceholder}>
+              <Text style={styles.previewImageEmoji}>📸</Text>
+              <Text style={styles.previewImageText}>Photo ready to post</Text>
+            </View>
+          </View>
+
+          {/* Event pill */}
+          <View style={styles.previewEventRow}>
+            <View style={styles.previewEventPill}>
+              <View style={styles.liveDot} />
+              <Text style={styles.previewEventText}>Blankets & Wine</Text>
+            </View>
+          </View>
+
+          {/* Caption */}
+          <TextInput
+            style={styles.captionInput}
+            placeholder="Add a caption... (optional)"
+            placeholderTextColor={colors.stone}
+            value={caption}
+            onChangeText={setCaption}
+            multiline
+            maxLength={200}
+          />
+
+          {/* Post button */}
+          <TouchableOpacity
+            style={[styles.postBtn, uploading && styles.postBtnDisabled]}
+            onPress={uploadPhoto}
+            disabled={uploading}
+          >
+            <Text style={styles.postBtnText}>
+              {uploading ? 'Posting...' : 'Post to event 🔥'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.discardBtn}
+            onPress={() => {
+              setPhotoUri(null)
+              setScreen('camera')
+            }}
+          >
+            <Text style={styles.discardText}>Discard</Text>
+          </TouchableOpacity>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+    )
+  }
+
+  // ── CAMERA SCREEN ────────────────────────────────────────
   return (
     <View style={styles.container}>
 
@@ -357,7 +522,6 @@ const styles = StyleSheet.create({
   zoomBar: {
     position: 'absolute',
     bottom: 30,
-    alignSelf: 'center',
     left: 0,
     right: 0,
     flexDirection: 'row',
@@ -467,5 +631,106 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.stone,
     marginTop: 10,
+  },
+  previewContent: {
+    flexGrow: 1,
+    backgroundColor: colors.night,
+    paddingBottom: 40,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingTop: 56,
+    paddingBottom: 14,
+    backgroundColor: colors.nightMid,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.nightLight,
+  },
+  previewBack: {
+    fontSize: 16,
+    color: colors.orange,
+    width: 60,
+  },
+  previewTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  previewImageWrap: {
+    margin: 18,
+  },
+  previewImagePlaceholder: {
+    height: 300,
+    backgroundColor: colors.nightMid,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  previewImageEmoji: {
+    fontSize: 48,
+  },
+  previewImageText: {
+    fontSize: 14,
+    color: colors.stone,
+  },
+  previewEventRow: {
+    paddingHorizontal: 18,
+    marginBottom: 14,
+  },
+  previewEventPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(216,90,48,0.2)',
+    borderRadius: 99,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    gap: 6,
+  },
+  previewEventText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.orange,
+  },
+  captionInput: {
+    backgroundColor: colors.nightMid,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: colors.white,
+    borderWidth: 0.5,
+    borderColor: colors.nightLight,
+    marginHorizontal: 18,
+    marginBottom: 14,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  postBtn: {
+    backgroundColor: colors.orange,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginHorizontal: 18,
+    marginBottom: 12,
+  },
+  postBtnDisabled: {
+    opacity: 0.6,
+  },
+  postBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  discardBtn: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  discardText: {
+    fontSize: 14,
+    color: colors.stone,
   },
 })
